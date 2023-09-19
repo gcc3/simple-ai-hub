@@ -6,12 +6,13 @@ Simple AI Hub
 Hub of the AI node instances.  
 Query nodes parallelly.  
 
-                      --- node
-                    /
-simple-ai-chat --- hub --- node
-                    \ 
-                      --- node
-
+```
+                      --- node  
+                    /  
+simple-ai-chat --- hub --- node  
+                    \  
+                      --- node  
+```
 
 Setup
 -----
