@@ -1,0 +1,2 @@
+node_url,timeout,is_enable
+http://host.docker.internal:3001/query,1000,1

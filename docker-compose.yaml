@@ -1,0 +1,14 @@
+version: '3'
+
+services:
+  simple-ai-core:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: simple-ai-hub
+    container_name: ${HUB}
+    restart: always
+    volumes:
+      - .:/app
+    ports:
+      - "${PORT}:${PORT}"
