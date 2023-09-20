@@ -7,11 +7,11 @@ Hub of the AI node instances.
 Query nodes parallelly.  
 
 ```
-                      --- node  
+                       --- node  
                     /  
 simple-ai-chat --- hub --- node  
                     \  
-                      --- node  
+                       --- node  
 ```
 
 Setup
