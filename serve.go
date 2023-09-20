@@ -114,7 +114,7 @@ func fetchSimpleResults(nodes []Node, input string) (map[string]string, error) {
 
 	combinedResult := ""
 	for r := range results {
-		combinedResult += "AI " + r.Type + " (ID=" + r.ID + ") : \n\n" + r.Result + " \n\n"
+		combinedResult += "AI " + r.Type + " (ID=" + r.ID + "): \n\n" + r.Result + " \n\n"
 	}
 
 	return map[string]string{"result": strings.TrimSpace(combinedResult)}, nil
