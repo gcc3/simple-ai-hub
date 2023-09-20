@@ -26,7 +26,7 @@ type QueryResult struct {
 	URL    string `json:"url"`
 	Type   string `json:"type"`
 	Status string `json:"status"`
-	Body   string `json:"body,omitempty"`
+	Result   string `json:"result,omitempty"`
 }
 
 func infoHandler(w http.ResponseWriter, r *http.Request) {
