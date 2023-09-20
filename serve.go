@@ -13,6 +13,7 @@ import (
 	"time"
 	"github.com/joho/godotenv"
 	"github.com/gorilla/mux"
+	"strings"
 )
 
 type Node struct {
@@ -39,7 +40,7 @@ func infoHandler(w http.ResponseWriter, r *http.Request) {
 
 func queryHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Querying with hub...")
-
+	
 	input := r.URL.Query().Get("input")
 	if input == "" {
 		http.Error(w, "Input query parameter is required", http.StatusBadRequest)
@@ -54,7 +55,7 @@ func queryHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	results, err := fetchResults(nodes, input)
+	results, err := fetchSimpleResults(nodes, input)
 	if err != nil {
 		http.Error(w, "Failed to fetch results", http.StatusInternalServerError)
 		return
@@ -62,6 +63,59 @@ func queryHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(results)
+}
+
+func fetchSimpleResults(nodes []Node, input string) (map[string]string, error) {
+	var wg sync.WaitGroup
+	results := make(chan QueryResponse, len(nodes))
+
+	for _, node := range nodes {
+		if node.IsEnable {
+			wg.Add(1)
+			go func(n Node) {
+				defer wg.Done()
+				client := &http.Client{
+					Timeout: n.Timeout,
+				}
+
+				resp, err := client.Get(n.URL + "?input=" + input)
+				if err != nil {
+					results <- QueryResponse{n.URL, n.Type, resp.Status, fmt.Sprintf("Error: %s", err.Error())}
+					return
+				}
+				defer resp.Body.Close()
+
+				// Read the response body
+				bodyBytes, err := io.ReadAll(resp.Body)
+				if err != nil {
+					results <- QueryResponse{n.URL, n.Type, resp.Status, fmt.Sprintf("Error reading body: %s", err.Error())}
+					return
+				}
+
+				// Parse the JSON response
+				var parsedResponse InnerQueryResponse
+				err = json.Unmarshal(bodyBytes, &parsedResponse)
+				if err != nil {
+					results <- QueryResponse{n.URL, n.Type, resp.Status, fmt.Sprintf("Error parsing JSON: %s", err.Error())}
+					return
+				}
+
+				results <- QueryResponse{n.URL, n.Type, resp.Status, parsedResponse.Result}
+			}(node)
+		}
+	}
+
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+
+	combinedResult := ""
+	for r := range results {
+		combinedResult += r.Result + "\n"
+	}
+
+	return map[string]string{"result": strings.TrimSpace(combinedResult)}, nil
 }
 
 func fetchResults(nodes []Node, input string) ([]QueryResponse, error) {
