@@ -6,6 +6,11 @@ services:
       context: .
       dockerfile: Dockerfile
     image: hub-${ID}
+    deploy:
+      resources:
+        limits:
+          cpus: '0.30'
+          memory: 256M
     container_name: ${HUB}
     restart: always
     volumes:
