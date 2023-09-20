@@ -30,4 +30,7 @@ Setup
 The port of application.  
 
 * HUB  
-Hub name.
+Hub name.  
+
+* ID  
+Hub ID, use a number.  

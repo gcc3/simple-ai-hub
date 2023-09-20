@@ -5,7 +5,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: simple-ai-hub
+    image: hub-${ID}
     container_name: ${HUB}
     restart: always
     volumes:
