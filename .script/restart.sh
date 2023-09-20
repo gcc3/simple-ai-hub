@@ -1,2 +1,2 @@
 docker compose restart
-bash .script\restart_nodes.sh
+bash .script/restart_nodes.sh
