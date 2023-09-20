@@ -18,16 +18,17 @@ import (
 
 type Node struct {
 	ID       string
+	Name     string
 	URL      string
 	Timeout  time.Duration
-	Type     string
 	IsEnable bool
 }
 
 type QueryResponse struct {
 	ID       string `json:"id"`
+	Name     string `json:"type"`
 	URL      string `json:"url"`
-	Type     string `json:"type"`
+	Timeout  time.Duration `json:"timeout"`
 	Status   string `json:"status"`
 	Result   string `json:"result,omitempty"`
 }
@@ -82,7 +83,7 @@ func fetchSimpleResults(nodes []Node, input string) (map[string]string, error) {
 
 				resp, err := client.Get(n.URL + "?input=" + input)
 				if err != nil {
-					results <- QueryResponse{n.ID, n.URL, n.Type, resp.Status, fmt.Sprintf("Error: %s", err.Error())}
+					results <- QueryResponse{n.ID, n.Name, n.URL, n.Timeout, resp.Status, fmt.Sprintf("Error: %s", err.Error())}
 					return
 				}
 				defer resp.Body.Close()
@@ -90,7 +91,7 @@ func fetchSimpleResults(nodes []Node, input string) (map[string]string, error) {
 				// Read the response body
 				bodyBytes, err := io.ReadAll(resp.Body)
 				if err != nil {
-					results <- QueryResponse{n.ID, n.URL, n.Type, resp.Status, fmt.Sprintf("Error reading body: %s", err.Error())}
+					results <- QueryResponse{n.ID, n.Name, n.URL, n.Timeout, resp.Status, fmt.Sprintf("Error reading body: %s", err.Error())}
 					return
 				}
 
@@ -98,11 +99,11 @@ func fetchSimpleResults(nodes []Node, input string) (map[string]string, error) {
 				var parsedResponse InnerQueryResponse
 				err = json.Unmarshal(bodyBytes, &parsedResponse)
 				if err != nil {
-					results <- QueryResponse{n.ID, n.URL, n.Type, resp.Status, fmt.Sprintf("Error parsing JSON: %s", err.Error())}
+					results <- QueryResponse{n.ID, n.Name, n.URL, n.Timeout, resp.Status, fmt.Sprintf("Error parsing JSON: %s", err.Error())}
 					return
 				}
 
-				results <- QueryResponse{n.ID, n.URL, n.Type, resp.Status, parsedResponse.Result}
+				results <- QueryResponse{n.ID, n.Name, n.URL, n.Timeout, resp.Status, parsedResponse.Result}
 			}(node)
 		}
 	}
@@ -114,7 +115,7 @@ func fetchSimpleResults(nodes []Node, input string) (map[string]string, error) {
 
 	combinedResult := ""
 	for r := range results {
-		combinedResult += "AI " + r.Type + " (ID=" + r.ID + "): \n\n" + r.Result + " \n\n"
+		combinedResult += "AI (name=" + r.Name + ", id=" + r.ID + "): \n\n" + r.Result + " \n\n"
 	}
 
 	return map[string]string{"result": strings.TrimSpace(combinedResult)}, nil
@@ -138,14 +139,14 @@ func readNodes(filename string) ([]Node, error) {
 			return nil, err
 		}
 
-		timeout, _ := strconv.Atoi(record[2])
+		timeout, _ := strconv.Atoi(record[3])
 		isEnable, _ := strconv.ParseBool(record[4])
 
 		node := Node{
 			ID:       record[0],
-			URL:      record[1],
+			Name:     record[1],
+			URL:      record[2],
 			Timeout:  time.Duration(timeout) * time.Second,
-			Type:     record[3],
 			IsEnable: isEnable,
 		}
 		nodes = append(nodes, node)
