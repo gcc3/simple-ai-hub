@@ -18,11 +18,13 @@ import (
 type Node struct {
 	URL      string
 	Timeout  time.Duration
+	Type     string
 	IsEnable bool
 }
 
-type Result struct {
+type QueryResult struct {
 	URL    string `json:"url"`
+	Type   string `json:"type"`
 	Status string `json:"status"`
 	Body   string `json:"body,omitempty"`
 }
@@ -58,10 +60,10 @@ func handleQuery(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(results)
 }
 
-func fetchResults(nodes []Node, input string) ([]Result, error) {
+func fetchResults(nodes []Node, input string) ([]QueryResult, error) {
 	var wg sync.WaitGroup
-	out := make([]Result, 0, len(nodes))
-	results := make(chan Result, len(nodes))
+	out := make([]QueryResult, 0, len(nodes))
+	results := make(chan QueryResult, len(nodes))
 
 	for _, node := range nodes {
 		if node.IsEnable {
@@ -74,7 +76,7 @@ func fetchResults(nodes []Node, input string) ([]Result, error) {
 
 				resp, err := client.Get(n.URL + "?input=" + input)
 				if err != nil {
-					results <- Result{n.URL, fmt.Sprintf("Error: %s", err.Error()), ""}
+					results <- QueryResult{n.URL, n.Type, resp.Status, fmt.Sprintf("Error: %s", err.Error())}
 					return
 				}
 				defer resp.Body.Close()
@@ -82,11 +84,11 @@ func fetchResults(nodes []Node, input string) ([]Result, error) {
 				// Read the response body
 				bodyBytes, err := io.ReadAll(resp.Body)
 				if err != nil {
-					results <- Result{n.URL, resp.Status, fmt.Sprintf("Error reading body: %s", err.Error())}
+					results <- QueryResult{n.URL, n.Type, resp.Status, fmt.Sprintf("Error reading body: %s", err.Error())}
 					return
 				}
 
-				results <- Result{n.URL, resp.Status, string(bodyBytes)}
+				results <- QueryResult{n.URL, n.Type, resp.Status, string(bodyBytes)}
 			}(node)
 		}
 	}
@@ -122,11 +124,12 @@ func readNodes(filename string) ([]Node, error) {
 		}
 
 		timeout, _ := strconv.Atoi(record[1])
-		isEnable, _ := strconv.ParseBool(record[2])
+		isEnable, _ := strconv.ParseBool(record[3])
 
 		node := Node{
 			URL:      record[0],
 			Timeout:  time.Duration(timeout) * time.Second,
+			Type:     record[2],
 			IsEnable: isEnable,
 		}
 		nodes = append(nodes, node)
