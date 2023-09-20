@@ -22,18 +22,22 @@ type Node struct {
 	IsEnable bool
 }
 
-type QueryResult struct {
+type QueryResponse struct {
 	URL    string `json:"url"`
 	Type   string `json:"type"`
 	Status string `json:"status"`
 	Result   string `json:"result,omitempty"`
 }
 
+type InnerQueryResponse struct {
+	Result string `json:"result"`
+}
+
 func infoHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, os.Getenv("HUB"))
 }
 
-func handleQuery(w http.ResponseWriter, r *http.Request) {
+func queryHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Querying with hub...")
 
 	input := r.URL.Query().Get("input")
@@ -60,10 +64,10 @@ func handleQuery(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(results)
 }
 
-func fetchResults(nodes []Node, input string) ([]QueryResult, error) {
+func fetchResults(nodes []Node, input string) ([]QueryResponse, error) {
 	var wg sync.WaitGroup
-	out := make([]QueryResult, 0, len(nodes))
-	results := make(chan QueryResult, len(nodes))
+	out := make([]QueryResponse, 0, len(nodes))
+	results := make(chan QueryResponse, len(nodes))
 
 	for _, node := range nodes {
 		if node.IsEnable {
@@ -76,7 +80,7 @@ func fetchResults(nodes []Node, input string) ([]QueryResult, error) {
 
 				resp, err := client.Get(n.URL + "?input=" + input)
 				if err != nil {
-					results <- QueryResult{n.URL, n.Type, resp.Status, fmt.Sprintf("Error: %s", err.Error())}
+					results <- QueryResponse{n.URL, n.Type, resp.Status, fmt.Sprintf("Error: %s", err.Error())}
 					return
 				}
 				defer resp.Body.Close()
@@ -84,11 +88,19 @@ func fetchResults(nodes []Node, input string) ([]QueryResult, error) {
 				// Read the response body
 				bodyBytes, err := io.ReadAll(resp.Body)
 				if err != nil {
-					results <- QueryResult{n.URL, n.Type, resp.Status, fmt.Sprintf("Error reading body: %s", err.Error())}
+					results <- QueryResponse{n.URL, n.Type, resp.Status, fmt.Sprintf("Error reading body: %s", err.Error())}
 					return
 				}
 
-				results <- QueryResult{n.URL, n.Type, resp.Status, string(bodyBytes)}
+				// Parse the JSON response
+				var parsedResponse InnerQueryResponse
+				err = json.Unmarshal(bodyBytes, &parsedResponse)
+				if err != nil {
+					results <- QueryResponse{n.URL, n.Type, resp.Status, fmt.Sprintf("Error parsing JSON: %s", err.Error())}
+					return
+				}
+
+				results <- QueryResponse{n.URL, n.Type, resp.Status, parsedResponse.Result}
 			}(node)
 		}
 	}
@@ -147,7 +159,7 @@ func main() {
 	// routes
 	r := mux.NewRouter()
 	r.HandleFunc("/", infoHandler).Methods("GET")
-	r.HandleFunc("/query", handleQuery).Methods("GET")  // query?input=...
+	r.HandleFunc("/query", queryHandler).Methods("GET")  // query?input=...
 
 	port := os.Getenv("PORT")
 	fmt.Println("Server started on port " + port + "\n")
