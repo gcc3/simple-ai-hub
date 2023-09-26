@@ -17,10 +17,10 @@ simple-ai-chat --- hub --- node
 Setup
 -----
 
-0. Clone and rename folder to `hub_[hub_name]`.  
-1. Put the simple-ai-node instance in folder `node_[node_name]` and run instances.  
-2. Use `node.csv` to setup the nodes.  
-3. Copy and create `.env` from `.env.example`.
+1. Clone and rename folder to `hub_[hub_name]`.  
+2. Put the simple-ai-node instance in folder `node_[node_name]` and run instances.  
+3. Copy and create `node.csv` from `node.csv.example` to link to nodes.  
+4. Copy and create `.env` from `.env.example`.
 
 
 .env
